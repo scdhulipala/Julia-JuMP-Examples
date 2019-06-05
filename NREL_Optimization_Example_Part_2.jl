@@ -1,0 +1,71 @@
+###################################################
+# Surya
+# NREl Julia Lang Tutorial - Optimization Example
+###################################################
+# Importing Packages
+###################################################
+using JuMP
+using Cbc
+###################################################
+# JuMP model with new syntax using Cbc Solver
+example = Model(with_optimizer(Cbc.Optimizer))
+###################################################
+# Define problem parameters for product a & b
+###################################################
+MachineHours = Dict{Symbol, Int}()
+MachineHours[:a] = 3
+MachineHours[:b] = 4
+
+ProductionCost = Dict{Symbol, Float64}()
+ProductionCost[:a] = 3
+ProductionCost[:b] = 2
+
+SellingPrice = Dict{Symbol, Float64}()
+SellingPrice[:a] = 6
+SellingPrice[:b] = 5.4
+
+PercentSalesRevenue = Dict{Symbol, Float64}()
+PercentSalesRevenue[:a] = 35/100
+PercentSalesRevenue[:b] = 30/100
+
+TotalMachineHours = 20_000
+AvailableCash = 4_000
+@variable(example, Quantity[[:a, :b]] >= 0, Int)
+###################################################
+# Constraints & Objective Function
+###################################################
+# Define machine hours constraint
+@constraint(
+            example,
+            Quantity[:a] * MachineHours[:a] +
+                Quantity[:b] * MachineHours[:b] <= TotalMachineHours
+           )
+# Define cashflow constraint
+@constraint(
+            example,
+            Quantity[:a] * ProductionCost[:a] +
+                Quantity[:b] * ProductionCost[:b] <= AvailableCash
+                + PercentSalesRevenue[:a] * Quantity[:a] * SellingPrice[:a] +
+                PercentSalesRevenue[:b] * Quantity[:b] * SellingPrice[:b]
+           )
+
+# Define profit-maximizing objective function
+@objective(
+           example, Max,
+           -1 * ( Quantity[:a] * ProductionCost[:a] +
+                    Quantity[:b] * ProductionCost[:b] ) +
+           Quantity[:a] * SellingPrice[:a] +
+               Quantity[:b] * SellingPrice[:b]
+          )
+###################################################
+# Solve the model and display results
+###################################################
+optimize!(example)
+
+# Report production quantities and total profit
+@show JuMP.value(Quantity[:a])
+@show JuMP.value(Quantity[:b])
+@show objective_value(example)
+
+
+
